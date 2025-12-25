@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "balorcve"
+version = "0.3.0"
+description = "Gestionnaire de CVE offline/online avec interface console"
+authors = [
+  { name = "idenroad" }
+]
+license = {text = "MIT"}
+readme = "README.md"
+dependencies = [
+    "requests",
+    "rich"
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.scripts]
+balorcve = "balorcve.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/idenroad/balorcve"
+Repository = "https://github.com/idenroad/balorcve.git"
