@@ -389,7 +389,7 @@ def online_search():
     display_cve_table(results)
 
     while True:
-        sel = Prompt.ask(msg("select_cve_index")
+        sel = Prompt.ask(msg("select_cve_index"))
         if sel.lower() == "r":
             break
         if not sel.isdigit() or int(sel) < 1 or int(sel) > len(results):
