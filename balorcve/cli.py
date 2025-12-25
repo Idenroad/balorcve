@@ -11,7 +11,7 @@ def main():
 
     has_data = any(f.endswith(".json") for f in os.listdir(DOWNLOAD_DIR))
     if not has_data:
-        console.print(f"[yellow]{msg('no_local_data')}[/yellow]")
+        console.print(msg("no_local_data"))
         choice = Prompt.ask(msg("download_default_2025"), choices=["y","n"])
         if choice == "y":
             url = f"{NVD_BASE_URL}/nvdcve-2.0-2025.json.gz"
@@ -24,7 +24,7 @@ def main():
             console.print(msg("manual_download_info"))
 
     while True:
-        console.print(f"\n[bold]{msg('main_menu')}[/bold]")
+        console.print(f"\n[bold]{msg('main_menu_title')}[/bold]")
         console.print(f"1) {msg('offline_mode')}")
         console.print(f"2) {msg('online_mode')}")
         console.print(f"3) {msg('quit')}")
@@ -40,4 +40,4 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        console.print(f"\n[red]{msg('interrupted')}[/red]")
+        console.print(msg("interrupted"))
