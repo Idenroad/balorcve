@@ -312,17 +312,12 @@ def offline_menu(conn):
         else:
             break
 
-# === ONLINE PART (unchanged) ===
+# === ONLINE PART  ===
 
 def online_search():
     console.print(msg("online_search_title"))
     keywords = Prompt.ask(msg("enter_keywords"))
-    year_input = Prompt.ask(msg("enter_year_optional"), default="")
-    min_score = Prompt.ask(msg("enter_min_score"), default="0.0")
-    try:
-        min_score = float(min_score)
-    except:
-        min_score = 0.0
+    end_date_str = Prompt.ask(msg("enter_end_date"), default="")
     severity = Prompt.ask(msg("enter_severity"), default="").upper()
     if severity not in ["LOW", "MEDIUM", "HIGH", "CRITICAL", ""]:
         console.print(msg("invalid_severity"))
@@ -330,30 +325,30 @@ def online_search():
     else:
         severity = severity if severity else None
 
+    min_score_str = Prompt.ask(msg("enter_min_score"), default="0.0")
+    try:
+        min_score = float(min_score_str)
+    except:
+        min_score = 0.0
+
     base_url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
     params = {}
 
     if keywords:
         params["keywordSearch"] = keywords
 
-    # Gestion de la date avec limite 120 jours
-    if year_input:
+    if end_date_str:
         try:
-            year = int(year_input)
-            # On limite la recherche à max 120 jours à partir du 1er janvier de l'année
-            start_date = datetime(year, 1, 1)
-            end_date = start_date + timedelta(days=119)
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+            start_date = end_date - timedelta(days=119)  # 120 jours max
             params["pubStartDate"] = start_date.strftime("%Y-%m-%dT%H:%M:%S:000 UTC-00:00")
             params["pubEndDate"] = end_date.strftime("%Y-%m-%dT%H:%M:%S:999 UTC-00:00")
-            console.print(f"[yellow]Note: Recherche limitée aux 120 premiers jours de l'année {year} pour respecter la limite API NVD.[/yellow]")
-        except Exception as e:
-            console.print(f"[red]Année invalide, la recherche ne sera pas filtrée par date.[/red]")
-    # Sinon pas de filtre date
+        except Exception:
+            console.print("[red]Date de fin invalide, format attendu : YYYY-MM-DD[/red]")
+            return
 
     if severity:
         params["cvssV3Severity"] = severity
-    if min_score:
-        params["cvssV3Metrics.baseScore"] = f">={min_score}"
 
     try:
         r = requests.get(base_url, params=params, timeout=30)
@@ -368,6 +363,7 @@ def online_search():
         console.print(msg("no_results"))
         return
 
+    # Filtrage côté client selon score minimum
     results = []
     for item in vulns:
         cve = item.get("cve", {})
@@ -381,7 +377,13 @@ def online_search():
         if cvss31 and len(cvss31) > 0:
             baseScore = cvss31[0].get("cvssData", {}).get("baseScore")
             baseSeverity = cvss31[0].get("cvssData", {}).get("baseSeverity")
+        if baseScore is not None and baseScore < min_score:
+            continue  # filtre score
         results.append((cve_id, desc, baseScore, baseSeverity))
+
+    if not results:
+        console.print(msg("no_results"))
+        return
 
     display_cve_table(results)
 
