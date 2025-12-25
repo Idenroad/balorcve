@@ -4,7 +4,7 @@ import sqlite3
 import gzip
 import shutil
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from rich.console import Console
 from rich.table import Table
 from rich.prompt import Prompt
@@ -317,8 +317,7 @@ def offline_menu(conn):
 def online_search():
     console.print(msg("online_search_title"))
     keywords = Prompt.ask(msg("enter_keywords"))
-    year = Prompt.ask(msg("enter_year_optional"), default="")
-    year = int(year) if year.isdigit() else None
+    year_input = Prompt.ask(msg("enter_year_optional"), default="")
     min_score = Prompt.ask(msg("enter_min_score"), default="0.0")
     try:
         min_score = float(min_score)
@@ -333,11 +332,24 @@ def online_search():
 
     base_url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
     params = {}
+
     if keywords:
         params["keywordSearch"] = keywords
-    if year:
-        params["pubStartDate"] = f"{year}-01-01T00:00:00:000 UTC-00:00"
-        params["pubEndDate"] = f"{year}-12-31T23:59:59:999 UTC-00:00"
+
+    # Gestion de la date avec limite 120 jours
+    if year_input:
+        try:
+            year = int(year_input)
+            # On limite la recherche à max 120 jours à partir du 1er janvier de l'année
+            start_date = datetime(year, 1, 1)
+            end_date = start_date + timedelta(days=119)
+            params["pubStartDate"] = start_date.strftime("%Y-%m-%dT%H:%M:%S:000 UTC-00:00")
+            params["pubEndDate"] = end_date.strftime("%Y-%m-%dT%H:%M:%S:999 UTC-00:00")
+            console.print(f"[yellow]Note: Recherche limitée aux 120 premiers jours de l'année {year} pour respecter la limite API NVD.[/yellow]")
+        except Exception as e:
+            console.print(f"[red]Année invalide, la recherche ne sera pas filtrée par date.[/red]")
+    # Sinon pas de filtre date
+
     if severity:
         params["cvssV3Severity"] = severity
     if min_score:
