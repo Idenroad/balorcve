@@ -317,7 +317,22 @@ def offline_menu(conn):
 def online_search():
     console.print(msg("online_search_title"))
     keywords = Prompt.ask(msg("enter_keywords"))
-    end_date_str = Prompt.ask(msg("enter_end_date"), default="")
+    end_date_str = Prompt.ask(msg("enter_end_date","(YYYY-MM-DD)"), default=datetime.now().strftime("%Y-%m-%d"))
+
+    # Validation et conversion
+    try:
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+    except ValueError:
+        console.print("[red]Format de date invalide[/red]")
+        return
+
+    start_date = end_date - timedelta(days=120)
+    min_score = Prompt.ask(msg("enter_min_score"), default="0.0")
+    try:
+        min_score = float(min_score)
+    except:
+        min_score = 0.0
+
     severity = Prompt.ask(msg("enter_severity"), default="").upper()
     if severity not in ["LOW", "MEDIUM", "HIGH", "CRITICAL", ""]:
         console.print(msg("invalid_severity"))
@@ -325,28 +340,12 @@ def online_search():
     else:
         severity = severity if severity else None
 
-    min_score_str = Prompt.ask(msg("enter_min_score"), default="0.0")
-    try:
-        min_score = float(min_score_str)
-    except:
-        min_score = 0.0
-
     base_url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
     params = {}
-
     if keywords:
         params["keywordSearch"] = keywords
-
-    if end_date_str:
-        try:
-            end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
-            start_date = end_date - timedelta(days=119)  # 120 jours max
-            params["pubStartDate"] = start_date.strftime("%Y-%m-%dT%H:%M:%S:000 UTC-00:00")
-            params["pubEndDate"] = end_date.strftime("%Y-%m-%dT%H:%M:%S:999 UTC-00:00")
-        except Exception:
-            console.print("[red]Date de fin invalide, format attendu : YYYY-MM-DD[/red]")
-            return
-
+    params["pubStartDate"] = start_date.strftime("%Y-%m-%dT%H:%M:%S")
+    params["pubEndDate"] = end_date.strftime("%Y-%m-%dT%H:%M:%S")
     if severity:
         params["cvssV3Severity"] = severity
 
@@ -355,19 +354,18 @@ def online_search():
         r.raise_for_status()
         data = r.json()
     except Exception as e:
-        console.print(msg("api_error").format(error=e))
+        console.print(f"[red]Erreur API: {e}[/red]")
         return
 
     vulns = data.get("vulnerabilities", [])
     if not vulns:
-        console.print(msg("no_results"))
+        console.print("[yellow]Aucun résultat trouvé[/yellow]")
         return
 
-    # Filtrage côté client selon score minimum
     results = []
     for item in vulns:
         cve = item.get("cve", {})
-        cve_id = cve.get("id", msg("na"))
+        cve_id = cve.get("id", "N/A")
         descs = cve.get("descriptions", [])
         desc = next((d["value"] for d in descs if d["lang"] == "en"), "")
         metrics = cve.get("metrics", {})
@@ -377,18 +375,21 @@ def online_search():
         if cvss31 and len(cvss31) > 0:
             baseScore = cvss31[0].get("cvssData", {}).get("baseScore")
             baseSeverity = cvss31[0].get("cvssData", {}).get("baseSeverity")
+        # Filtrage local
         if baseScore is not None and baseScore < min_score:
-            continue  # filtre score
+            continue
+        if severity and baseSeverity != severity:
+            continue
         results.append((cve_id, desc, baseScore, baseSeverity))
 
     if not results:
-        console.print(msg("no_results"))
+        console.print("[yellow]Aucun résultat trouvé après filtrage[/yellow]")
         return
 
     display_cve_table(results)
 
     while True:
-        sel = Prompt.ask(msg("select_cve_index"), default="r")
+        sel = Prompt.ask(msg("select_cve_index")
         if sel.lower() == "r":
             break
         if not sel.isdigit() or int(sel) < 1 or int(sel) > len(results):
