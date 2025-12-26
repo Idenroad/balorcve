@@ -317,7 +317,7 @@ def offline_menu(conn):
 def online_search():
     console.print(msg("online_search_title"))
     keywords = Prompt.ask(msg("enter_keywords"))
-    end_date_str = Prompt.ask(msg("enter_end_date")), default=datetime.now().strftime("%Y-%m-%d"))
+    end_date_str = Prompt.ask(msg("enter_end_date"), default=datetime.now().strftime("%Y-%m-%d"))
 
     # Validation et conversion
     try:
