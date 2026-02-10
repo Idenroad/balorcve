@@ -20,7 +20,15 @@ CVE_SAVE_DIR = os.path.join(DATA_DIR, "cve")
 DB_PATH = os.path.join(DATA_DIR, "cve.db")
 
 NVD_BASE_URL = "https://nvd.nist.gov/feeds/json/cve/2.0"
-YEARS = [2020, 2021, 2022, 2023, 2024, 2025]
+START_YEAR = 2020
+
+def get_supported_years(start_year=START_YEAR):
+    current_year = datetime.now().year
+    if start_year > current_year:
+        return [current_year]
+    return list(range(start_year, current_year + 1))
+
+YEARS = get_supported_years()
 
 console = Console()
 
@@ -226,8 +234,8 @@ def save_cve_html(cve_json, filepath):
         <p><strong>{msg('description')}:</strong><br>{desc_html}</p>
         <p><strong>{msg('score')}:</strong> <span class="score">{baseScore if baseScore is not None else msg('na')}</span></p>
         <p><strong>{msg('severity')}:</strong> <span class="severity">{baseSeverity if baseSeverity else msg('na')}</span></p>
-        <p><strong>{msg('published')}:</strong> {published}</p>
-        <p><strong>{msg('last_modified')}:</strong> {lastModified}</p>
+        <p><strong>{msg('published')}: {published}</strong></p>
+        <p><strong>{msg('last_modified')}: {lastModified}</strong></p>
         <h2>{msg('references')}</h2>
         <ul>
             {refs_html if refs_html else f'<li>{msg("no_references")}</li>'}
@@ -251,8 +259,9 @@ def offline_menu(conn):
         console.print(f"5) {msg('quit')}")
         choice = Prompt.ask(msg("choice"), choices=["1","2","3","4","5"])
         if choice == "1":
-            year = Prompt.ask(msg("enter_year").format(start=YEARS[0], end=YEARS[-1]), default=str(YEARS[-1]))
-            if not year.isdigit() or int(year) not in YEARS:
+            years = get_supported_years()
+            year = Prompt.ask(msg("enter_year").format(start=years[0], end=years[-1]), default=str(years[-1]))
+            if not year.isdigit() or int(year) < years[0] or int(year) > years[-1]:
                 console.print(msg("invalid_year"))
                 continue
             url = f"{NVD_BASE_URL}/nvdcve-2.0-{year}.json.gz"

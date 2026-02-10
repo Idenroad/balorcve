@@ -8,6 +8,7 @@ from .core import (
 )
 from .i18n import msg
 import os
+from datetime import datetime
 
 console = Console()
 
@@ -18,13 +19,14 @@ def main():
     has_data = any(f.endswith(".json") for f in os.listdir("/opt/balorsh/data/balorcve/cve-download"))
     if not has_data:
         console.print(msg("no_local_data"))
-        choice = Prompt.ask(msg("download_default_2025"), choices=["y","n"])
+        default_year = str(datetime.now().year)
+        choice = Prompt.ask(msg("download_default_year").format(year=default_year), choices=["y","n"])
         if choice == "y":
             # Téléchargement automatique du fichier 2025
             from .core import download_cve_file, decompress_gz, import_cve_json, NVD_BASE_URL, DOWNLOAD_DIR
-            url = f"{NVD_BASE_URL}/nvdcve-2.0-2025.json.gz"
-            gz_path = os.path.join(DOWNLOAD_DIR, "nvdcve-2.0-2025.json.gz")
-            json_path = os.path.join(DOWNLOAD_DIR, "nvdcve-2.0-2025.json")
+            url = f"{NVD_BASE_URL}/nvdcve-2.0-{default_year}.json.gz"
+            gz_path = os.path.join(DOWNLOAD_DIR, f"nvdcve-2.0-{default_year}.json.gz")
+            json_path = os.path.join(DOWNLOAD_DIR, f"nvdcve-2.0-{default_year}.json")
             if download_cve_file(url, gz_path):
                 decompress_gz(gz_path, json_path)
                 import_cve_json(json_path, conn)
